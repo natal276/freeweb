@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Countdown Detik-Detik Proklamasi</title>
+    <style>
+        /* CSS STYLING */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #cc0000 50%, #ffffff 50%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+            padding: 20px;
+            overflow: hidden; /* Mencegah scrollbar muncul saat animasi */
+            position: relative;
+        }
+
+        /* Canvas untuk Animasi Fisika Emoji */
+        #physics-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Klik bisa menembus canvas */
+            z-index: 10;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+            border: 5px solid #cc0000;
+            position: relative;
+            z-index: 5;
+        }
+
+        h1 {
+            color: #cc0000;
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .countdown-wrapper {
+            display: flex;
+            justify-content: space-around;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .time-box {
+            background: #cc0000;
+            color: #ffffff;
+            padding: 20px 10px;
+            border-radius: 12px;
+            width: 22%;
+            box-shadow: 0 5px 15px rgba(204, 0, 0, 0.3);
+            transition: transform 0.2s;
+        }
+
+        .time-box:hover {
+            transform: translateY(-5px);
+        }
+
+        .number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            display: block;
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+
+        .label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: block;
+            opacity: 0.9;
+        }
+
+        .footer-text {
+            font-size: 0.9rem;
+            color: #777;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 480px) {
+            h1 { font-size: 1.6rem; }
+            .subtitle { font-size: 0.9rem; }
+            .countdown-wrapper { gap: 8px; }
+            .number { font-size: 1.8rem; }
+            .label { font-size: 0.7rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas untuk menampung pergerakan emoji -->
+    <canvas id="physics-canvas"></canvas>
+
+    <div class="container">
+        <h1>Detik-Detik Proklamasi</h1>
+        <div class="subtitle">Indonesia Bersatu Berdaulat Adil dan Makmur</div>
+
+        <div class="countdown-wrapper">
+            <div class="time-box">
+                <span class="number" id="days">00</span>
+                <span class="label">Hari</span>
+            </div>
+            <div class="time-box">
+                <span class="number" id="hours">00</span>
+                <span class="label">Jam</span>
+            </div>
+            <div class="time-box">
+                <span class="number" id="minutes">00</span>
+                <span class="label">Menit</span>
+            </div>
+            <div class="time-box">
+                <span class="number" id="seconds">00</span>
+                <span class="label">Detik</span>
+            </div>
+        </div>
+
+        <div class="footer-text" id="message">
+            Upacara Peringatan Detik-Litik Proklamasi dimulai setiap 17 Agustus pukul 10:00 WIB.
+        </div>
+    </div>
+
+    <script>
+        // MODE TESTING: Ubah ke false untuk kembali menggunakan waktu asli GMT+7
+        const isTesting = false; 
+
+        function getNextProclamationTime() {
+            if (isTesting) {
+                return new Date().getTime() + 10000; 
+            }
+
+            const nowLocal = new Date();
+            const utcNow = nowLocal.getTime() + (nowLocal.getTimezoneOffset() * 60 * 1000);
+            const wibOffset = 7 * 60 * 60 * 1000; 
+            const nowWIB = new Date(utcNow + wibOffset);
+            
+            const currentYear = nowWIB.getFullYear();
+            let targetDateUTC = new Date(`${currentYear}-08-17T03:00:00Z`).getTime();
+            
+            if (nowWIB.getTime() > new Date(`${currentYear}-08-17T10:00:00+07:00`).getTime()) {
+                targetDateUTC = new Date(`${currentYear + 1}-08-17T03:00:00Z`).getTime();
+            }
+            
+            return targetDateUTC;
+        }
+
+        const countdownTarget = getNextProclamationTime();
+
+        const updateCountdown = setInterval(function() {
+            const now = new Date().getTime();
+            const distance = countdownTarget - now;
+
+            const days = Math.max(0, Math.floor(distance / (1000 * 60 * 60 * 24)));
+            const hours = Math.max(0, Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
+            const minutes = Math.max(0, Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)));
+            const seconds = Math.max(0, Math.floor((distance % (1000 * 60)) / 1000));
+
+            document.getElementById("days").innerHTML = String(days).padStart(2, '0');
+            document.getElementById("hours").innerHTML = String(hours).padStart(2, '0');
+            document.getElementById("minutes").innerHTML = String(minutes).padStart(2, '0');
+            document.getElementById("seconds").innerHTML = String(seconds).padStart(2, '0');
+
+            if (distance < 0) {
+                clearInterval(updateCountdown);
+                document.getElementById("days").innerHTML = "00";
+                document.getElementById("hours").innerHTML = "00";
+                document.getElementById("minutes").innerHTML = "00";
+                document.getElementById("seconds").innerHTML = "00";
+                document.getElementById("message").innerHTML = "<strong>HUT RI ke 81</strong>";
+                document.getElementById("message").style.color = "#cc0000";
+                
+                // Memicu ledakan animasi fisika emoji
+                startEmojiPhysics();
+            }
+        }, 1000);
+
+        // --- ANIMASI FISIKA EMOJI (CANVAS ENGINE) ---
+        function startEmojiPhysics() {
+            const canvas = document.getElementById("physics-canvas");
+            const ctx = canvas.getContext("2d");
+
+            // Atur ukuran canvas menyesuaikan layar penuh
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            const emojis = ['🎊', '🎉', '🥳', '🇮🇩'];
+            const particles = [];
+            const gravity = 0.25; // Kekuatan tarikan gravitasi ke bawah
+
+            // Struktur objek partikel tunggal
+            class EmojiParticle {
+                constructor() {
+                    this.x = Math.random() * canvas.width; // Posisi horizontal acak di bawah layar
+                    this.y = canvas.height + 50;           // Mulai dari luar batas bawah layar
+                    
+                    // Kecepatan lemparan (Sumbu Y ke atas negatif, Sumbu X acak kiri/kanan)
+                    this.vx = (Math.random() - 0.5) * 8; 
+                    this.vy = -(Math.random() * 12 + 10);  // Kecepatan lempar ke atas acak tinggi
+                    
+                    this.text = emojis[Math.floor(Math.random() * emojis.length)];
+                    this.size = Math.random() * 15 + 25;   // Ukuran acak antara 25px - 40px
+                    
+                    // Efek rotasi putaran udara
+                    this.rotation = Math.random() * Math.PI * 2;
+                    this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+                }
+
+                update() {
+                    this.vy += gravity; // Gravitasi menambah kecepatan jatuh ke bawah
+                    this.x += this.vx;   // Pergerakan horizontal
+                    this.y += this.vy;   // Pergerakan vertikal
+                    this.rotation += this.rotationSpeed; // Rotasi berputar
+                }
+
+                draw() {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.rotation);
+                    ctx.font = `${this.size}px Arial`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(this.text, 0, 0);
+                    ctx.restore();
+                }
+            }
+
+            // Membuat 150 partikel emoji sekaligus saat meledak
+            for (let i = 0; i < 150; i++) {
+                particles.push(new EmojiParticle());
+            }
+
+            // Loop utama render frame animasi
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    particles[i].update();
+                    particles[i].draw();
+
+                    // Hapus objek jika sudah jatuh total keluar layar untuk menghemat memori
+                    if (particles[i].y > canvas.height + 100) {
+                        particles.splice(i, 1);
+                    }
+                }
+
+                // Terus loop selama partikel masih ada di layar
+                if (particles.length > 0) {
+                    requestAnimationFrame(animate);
+                }
+            }
+
+            animate();
+        }
+    </script>
+
+</body>
+</html>
